@@ -1,0 +1,181 @@
+//IoT based smart classroom nodeMCU final code edited on 01 june 2023 01:27am
+#include<FirebaseArduino.h>
+#include<ESP8266WiFi.h>
+#include<WiFiManager.h>
+#define firebase_host "smartclassroom1-edeeb-default-rtdb.firebaseio.com"
+#define firebase_auth "TRfYLkxDjG1EIc7QdDtkUQccrpRm5DFqJubeFnml"
+
+#include<LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+#include<Keypad.h>
+const byte rows = 2;
+const byte cols = 2;
+char hexaKeys[rows][cols]{
+  {'p', 'q'},
+  {'r', 's'},
+ };
+ byte rowPins[rows] = {D3, D4};
+ byte colPins[cols] = {D5, D6};
+ Keypad mykeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, rows, cols);
+char customKey;
+String classinfo[] = {"", "", "", "", "", ""};
+String count = " " ;
+
+#define wifi_led D7
+#define buz D8
+
+void setup() {
+  pinMode(wifi_led, OUTPUT);
+  digitalWrite(wifi_led, LOW);
+  pinMode(buz, OUTPUT);
+  digitalWrite(buz, LOW);
+
+ Serial.begin(9600);
+ lcd.init();
+ lcd.backlight();
+ delay(2000); 
+ lcd.clear();
+ lcd.begin(20, 4);
+ lcd.print("Initialzed NodeMCU");
+ delay(2000);  
+ lcd.clear();
+ wifi_connect();
+}
+
+void wifi_connect(){
+  lcd.backlight();
+  lcd.setCursor(0, 1);
+  lcd.print("connecting to wifi  ");
+  WiFiManager wm;
+  bool res;
+  res = wm.autoConnect("SmartClassroom_WM","G13@1234"); // password protected ap
+  if(!res) {
+    lcd.setCursor(0,3);
+    lcd.print("WiFi Conection Fail ");
+    lcd.setCursor(0,2);
+    lcd.print("Please Try Again    "); 
+    for(int i=0; i<3; i++){
+      digitalWrite(buz, HIGH);
+      delay(400);
+      digitalWrite(buz, LOW);
+      delay(500);
+      delay(1000);  
+      lcd.clear();
+      lcd.noBacklight();
+    }
+  }
+  else {
+    //if you get here you have connected to the WiFi
+    lcd.clear();
+    lcd.setCursor(0,0);    
+    lcd.print("WiFi connected to:"); 
+    lcd.setCursor(0,3);
+    lcd.print(wm.getWiFiSSID());
+    digitalWrite(buz, HIGH);
+    delay(500);
+    digitalWrite(buz, LOW);
+    
+    Firebase.begin(firebase_host,firebase_auth);
+    delay(2000);
+    lcd.clear();
+    lcd.noBacklight();
+  }
+}
+
+
+void loop() {
+  if(WiFi.status() != WL_CONNECTED){
+    digitalWrite(wifi_led, HIGH);
+  }else{ digitalWrite(wifi_led, LOW);}
+
+  customKey = mykeypad.getKey();
+  if(customKey){
+    Serial.print(customKey);
+  }
+  
+  while(Serial.available()>0){
+    char flg = Serial.read();
+    if(flg == 'b'){
+      for(int j=0; j<6; j++){
+        digitalWrite(buz, HIGH);
+        delay(600);
+        digitalWrite(buz, LOW);
+        delay(400);
+      }
+      flg = '0' ;
+    }
+    if(flg == 'c'){
+      delay(50);
+      count = Serial.readString();
+      Firebase.setString("Atten1", count);
+      flg = '0' ;
+    }
+    if(flg == 'D'){
+      for(int k=0; k<6; k++){
+        Serial.print('y');
+        while(!Serial.available()){}
+        classinfo[k]= Serial.readString();
+        }
+      delay(2000);
+      lcd.clear();
+      lcd.backlight();
+      lcd.setCursor(0,1);
+      lcd.print("data uploading....");
+      firebaseSetData();
+    }
+    if(flg == 'd'){
+      for(int l=0; l<4; l++){
+        Serial.print('y');
+        while(!Serial.available()){}
+        classinfo[l]= Serial.readString();
+        }
+      firebaseSetData1();
+    }
+  }
+}
+
+void firebaseSetData(){
+  Firebase.setString("Branch1",classinfo[0]);
+  Firebase.setString("Class1",classinfo[1]);
+  Firebase.setString("Sub1",classinfo[2]);
+  Firebase.setString("Teacher1",classinfo[3]);
+  Firebase.setString("Room1",classinfo[4]);
+  Firebase.setString("Depart1",classinfo[5]);
+  if(Firebase.failed()){
+    lcd.clear();
+    lcd.backlight();
+    lcd.setCursor(0,1);
+    lcd.print("Data upload failed: ");
+    lcd.setCursor(0,3);
+    Serial.print("Check wifiConnection");
+    for(int i=0; i<3; i++){
+      digitalWrite(buz, HIGH);
+      delay(200);
+      digitalWrite(buz, LOW);
+      delay(200);
+    }
+    delay(1000);
+    lcd.clear();
+    lcd.noBacklight(); 
+    return;
+  }
+  else{
+    lcd.clear();
+    lcd.backlight();
+    lcd.setCursor(0,0);
+    lcd.print("info is uploaded");
+    lcd.setCursor(0,3);
+    lcd.print(" U Can Strart Lect. ");
+    delay(2000);
+    lcd.clear();
+    lcd.noBacklight();
+  }
+}
+
+void firebaseSetData1(){
+  Firebase.setString("Branch1",classinfo[0]);
+  Firebase.setString("Class1",classinfo[1]);
+  Firebase.setString("Sub1",classinfo[2]);
+  Firebase.setString("Teacher1",classinfo[3]);
+}

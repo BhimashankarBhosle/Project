@@ -1,0 +1,622 @@
+//Iot based smart classroom Arduino code2 last edited on 01 jun 2023 00:30AM
+#include <LiquidCrystal_I2C.h>
+#include<millisDelay.h>
+#include <Keypad.h>
+
+LiquidCrystal_I2C lcd(0x27,20,4);
+millisDelay timer;
+
+
+const byte ROWS = 4; //four rows
+const byte COLS = 3; //four columns
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'0',' ',' '},
+  };
+byte rowPins[ROWS] = {2, 3, 4, 5}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {6, 7, 8}; //connect to the column pinouts of the keypad
+
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+int customKey;
+char Key;
+
+String classes[] = {"Last year", "Third year", "Second year", "First year"};
+String branches[] ={"E&Tc", "Comp", "Inst", "Mech"};
+String LYcourses[] = {"sub1","sub2","sub3", "sub4"};
+String TYcourses[] = {"sub1","sub2","sub3", "sub4"};
+String SYcourses[] = {"sub1","sub2","sub3", "sub4"};
+String FYcourses[] = {"sub1","sub2","sub3", "sub4"};
+String faculty[] = {"S.P.M","D.S.C","S.M.P", "S.C.K."};
+String classinfo[6]= {"", "", "", "", "", ""} ;
+
+String Depart = "E&Tc";
+String room   = "123" ;
+
+int tag = 0; int z = 0; 
+
+int l1flg =0; int l2flg =0; int f1flg =0; int f2flg =0;
+int irflag1 = 0;
+int irflag2 = 0; 
+int count = 0;
+int classinfoIndex = 0;
+
+#define pir1 A2
+#define pir2 A3
+#define lamp1 9
+#define fan1 10
+#define lamp2 11
+#define fan2 12
+
+void setup() {
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  pinMode(pir1, INPUT);
+  pinMode(pir2, INPUT);
+  pinMode(lamp1, OUTPUT);
+  pinMode(lamp2, OUTPUT);
+  pinMode(fan1, OUTPUT);
+  pinMode(fan2, OUTPUT);
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
+  digitalWrite(lamp1, HIGH);
+  digitalWrite(lamp2, HIGH);
+  digitalWrite(fan1, HIGH);
+  digitalWrite(fan2, HIGH);
+
+ Serial.begin(9600);
+ lcd.init();
+ lcd.backlight();
+ lcd.begin(20, 4);
+ lcd.print("Initialized Arduino");
+ delay(2000);  
+ lcd.clear();
+ lcd.noBacklight();
+
+    Serial.print('c');
+    Serial.flush();
+    delay(50);
+    Serial.print(String(count));
+}
+
+void loop() {
+  //classroom automation code starts with here
+ peopleCount();
+ if(count>0){ digitalWrite(13, HIGH);}
+ else{ digitalWrite(13, LOW);}
+
+ char c = Serial.read();
+ if(c == 'p' && count > 0){
+   c = '0';
+   if(l1flg == 0){
+     digitalWrite(lamp1, LOW);
+     l1flg = 1;
+   }
+   else if(l1flg == 1){
+     digitalWrite(lamp1, HIGH);
+     l1flg = 0;
+   }
+ }
+ if(c == 'q' && count > 0){
+   c = '0';
+   if(f1flg == 0){
+     digitalWrite(fan1, LOW);
+     f1flg = 1;
+   }
+   else if(f1flg == 1){
+     digitalWrite(fan1, HIGH);
+     f1flg = 0;
+   }
+ }
+ if(c == 'r' && count > 0){
+   c = '0';
+   if(l2flg == 0){
+     digitalWrite(lamp2, LOW);
+     l2flg = 1;
+   }
+   else if(l2flg == 1){
+     digitalWrite(lamp2, HIGH);
+     l2flg = 0;
+   }
+ }
+ if(c == 's' && count > 0){
+   c = '0';
+   if(f2flg == 0){
+     digitalWrite(fan2, LOW);
+     f2flg = 1;
+   }
+   else if(f2flg == 1){
+     digitalWrite(fan2, HIGH);
+     f2flg = 0;
+   }
+ }
+ if(count > 0){
+   if(digitalRead(pir1)){
+     digitalWrite(lamp1, LOW);
+     digitalWrite(fan1, LOW);
+     l1flg = 1; f1flg = 1;
+   }
+   if(digitalRead(pir2)){
+     digitalWrite(lamp2, LOW);
+     digitalWrite(fan2, LOW);
+     l2flg = 1; f2flg = 1;
+   }
+ } else{
+    digitalWrite(lamp1, HIGH);
+    digitalWrite(lamp2, HIGH);
+    digitalWrite(fan1, HIGH);
+    digitalWrite(fan2, HIGH);
+     l1flg = 0; f1flg = 0; l2flg =0; f2flg =0;
+ }
+  //classroom automation code ends with here
+
+Start:
+  // if(count > 0){
+    customKey = customKeypad.getKey();
+    Key = customKey;
+  // }
+  
+   if(customKey){  
+        if(customKey == 49 && tag == 0){
+           if(timer.isRunning()){
+            tag = 10;
+            lcd.backlight();
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print("Stop Current Lect.??");
+            lcd.setCursor(0,3);
+            lcd.print("Press ENTER key");
+            lcd.setCursor(0,2);
+            lcd.print("else press CLEAR key");
+           }
+           else{
+            start1:
+            tag = 10;
+            lcd.backlight();
+            lcd.clear();
+            lcd.print("  WELCOME IN SMART       CLASSROOM");
+            delay(2000);
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print("Conducting Lecture??");
+            lcd.setCursor(0,3);
+            lcd.print("Press ENTER Key");
+           }
+        }
+   }        
+   if(customKey){  
+        if(customKey == 53 && tag == 10){
+            start2:
+            tag = 11;
+            timer.stop();
+            String rno = "Room No: " ;
+            String dept = "Department: "; 
+            lcd.clear(); 
+            lcd.setCursor(0,1);
+            lcd.print("Pls Confirm This....");
+            lcd.setCursor(0,0);
+            lcd.print(rno + room);
+            lcd.setCursor(0,3);
+            lcd.print(dept + Depart);
+            lcd.setCursor(0,2);
+            lcd.print("  NEXT        BACK  ");
+        }    
+   }
+   if(customKey){  
+        if(customKey == 54 && tag == 11){
+            classinfo[5] = Depart;
+            classinfo[4] = room;
+            tag = 12;
+            lcd.clear();
+            lcd.print("Select Branch Name: ");
+            delay(2000);
+            lcd.clear();
+            for(int a=0; a<4; a++)                  // printing the array of classes using for loop
+            {
+                  int p=a+1;
+                  lcd.setCursor(0,a);
+                  lcd.print(p+branches[a]);
+            }
+        }
+        else if(customKey == 52 && tag == 11){
+            Key = 'a';
+            delay(200);
+            lcd.clear();
+            lcd.setCursor(0,1);
+            lcd.print("Enter room no.");
+            tag = 50;
+            room = "";
+            z=0;
+        }
+   }
+   if(customKey){                            //to enter the classroom no. manually
+        if(tag == 50 && z<3 && Key != 'a'){
+            lcd.print(Key);  
+            room += Key;
+            Key = 'a';
+            z++;
+            if(z>=3){
+              lcd.setCursor(0,3);
+              lcd.print("Press ENTER key.");
+              customKey = 0;
+              delay(100);
+              tag = 55 ;
+            }
+        }  
+        if(customKey == 53 && tag == 55){
+            z = 0;
+            printbranches();                //call function to print branches
+        }
+   }
+   if(customKey){                             // to select the department of the classroom
+        if(customKey == 49 && tag == 19){
+            Depart = branches[0];
+            goto start2;                      // and begin from start2 label
+        }
+        else if(customKey == 50 && tag == 19){
+             Depart = branches[1];
+            goto start2;
+        }
+        else if(customKey == 51 && tag == 19){
+            Depart = branches[2];
+            goto start2;
+        }
+        else if(customKey == 52 && tag == 19){
+            Depart = branches[3];
+            goto start2;
+        }
+   }
+   if(customKey){                             // to select the class
+        if(customKey == 49 && tag == 12){
+            classinfo[0] = branches[0];
+            printclasses();                 // and print the branches list
+        }
+        else if(customKey == 50 && tag == 12){
+            classinfo[0] = branches[1];
+            printclasses();
+        }
+        else if(customKey == 51 && tag == 12){
+            classinfo[0] = branches[2];
+            printclasses();
+        }
+        else if(customKey == 52 && tag == 12){
+            classinfo[0] = branches[3];
+            printclasses();
+        }
+   }
+   if(customKey){                             // to select the class
+      if(customKey == 49 && tag == 21){
+          classinfo[1] = classes[0];
+          printLYcources();                 // and print the last year courses list
+      }
+      else if(customKey == 50 && tag == 21){
+          classinfo[1] = classes[1];
+          printTYcources();
+      }
+      else if(customKey == 51 && tag == 21){
+          classinfo[1] = classes[2];
+          printSYcources();
+      }
+      else if(customKey == 52 && tag == 21){
+          classinfo[1] = classes[3];
+          printFYcources();
+      }
+   }
+
+
+   if(customKey){                             // to select the last year cources
+        if(customKey == 49 && tag == 13){
+            classinfo[2] = LYcourses[0];
+            printfaculty();                    // and to print the faculty list
+        }
+        else if(customKey == 50 && tag == 13){
+            classinfo[2] = LYcourses[1];
+            printfaculty();
+        }
+        else if(customKey == 51 && tag == 13){
+            classinfo[2] = LYcourses[2];
+            printfaculty();
+        }
+        else if(customKey == 52 && tag == 13){
+            classinfo[2] = LYcourses[3];
+            printfaculty();
+        }
+   }
+   
+   if(customKey){                             // to select the last year cources
+          if(customKey == 49 && tag == 14){
+              classinfo[2] = TYcourses[0];
+              printfaculty();                    // and to print the faculty list
+          }
+          else if(customKey == 50 && tag == 14){
+              classinfo[2] = TYcourses[1];
+              printfaculty();
+          }
+          else if(customKey == 51 && tag == 14){
+              classinfo[2] = TYcourses[2];
+              printfaculty();
+          }
+          else if(customKey == 52 && tag == 14){
+              classinfo[2] = TYcourses[3];
+              printfaculty();
+          }
+     }
+     if(customKey){                             // to select the last year cources
+        if(customKey == 49 && tag == 15){
+            classinfo[2] = SYcourses[0];
+            printfaculty();                    // and to print the faculty list
+        }
+        else if(customKey == 50 && tag == 15){
+            classinfo[2] = SYcourses[1];
+            printfaculty();
+        }
+        else if(customKey == 51 && tag == 15){
+            classinfo[2] = SYcourses[2];
+            printfaculty();
+        }
+        else if(customKey == 52 && tag == 15){
+            classinfo[2] = SYcourses[3];
+            printfaculty();
+        }
+   }
+     if(customKey){                             // to select the last year cources
+        if(customKey == 49 && tag == 16){
+            classinfo[2] = FYcourses[0];
+            printfaculty();                    // and to print the faculty list
+        }
+        else if(customKey == 50 && tag == 16){
+            classinfo[2] = FYcourses[1];
+            printfaculty();
+        }
+        else if(customKey == 51 && tag == 16){
+            classinfo[2] = FYcourses[2];
+            printfaculty();
+        }
+        else if(customKey == 52 && tag == 16){
+            classinfo[2] = FYcourses[3];
+            printfaculty();
+        }
+   }
+   if(customKey){                             // to select the faculty names
+        if(customKey == 49 && tag == 17){
+            classinfo[3] = faculty[0];
+            printclassinfo();                    // and to print the final list
+        }
+        else if(customKey == 50 && tag == 17){
+            classinfo[3] = faculty[1];
+            printclassinfo();
+        }
+        else if(customKey == 51 && tag == 17){
+            classinfo[3] = faculty[2];
+            printclassinfo();
+        }
+        else if(customKey == 52 && tag == 17){
+            classinfo[3] = faculty[3];
+           printclassinfo();
+        }
+   }
+   if(customKey){
+        if(customKey == 53 && tag == 18){
+          Serial.print('D');
+          delay(50);
+          for(int i =0; i<6; i++){
+            while(Serial.read() != 'y'){}
+            Serial.print(classinfo[i]);
+            Serial.flush();
+          }
+          lcd.clear();
+          lcd.setCursor(0,1);
+          lcd.print("Done...");
+          lcd.setCursor(0,0);
+          lcd.print("info is updated");
+          timer.start(40000);       // start the timer for 30sec which will be the duration of lecture
+          delay(1000);
+          tag = 0;
+          customKey = 0;           
+        }
+        else if(customKey == 52 && tag == 18){
+            goto start2;
+        }
+   }
+   // when timer finished this code runs
+   if(timer.justFinished() && tag != 11){
+      lcd.backlight();
+      lcd.clear();
+      lcd.print("Lecture's Time Out");
+      Serial.print('b');               //send char 'b' for buzzer
+      // Serial.print('\0');
+      delay(2000);
+      lcd.clear();
+      lcd.noBacklight();
+      Serial.print('d');
+      delay(50);             
+      for(int j =0; j<4; j++){
+        while(Serial.read() != 'y'){}
+        Serial.print(" -");
+        Serial.flush();
+      }
+   }
+   if(customKey){
+      if(customKey  == 51){
+          tag = 0;
+          customKey = 0;
+          lcd.clear();
+          lcd.print("Clearing....");
+          delay(2000);
+          lcd.clear();
+          lcd.noBacklight();
+          goto Start;
+      }
+   }
+
+}
+
+// function to count the no of people in classroom 
+int peopleCount(){
+  int ir1 = digitalRead(A0);
+  int ir2 = digitalRead(A1);
+  // to increment count when people enter inside room
+  if(ir1 ==0 && ir2 ==1 && irflag1 == 0) {irflag1 = 1; }
+  if(ir1 ==0 && ir2 ==0 && irflag1 == 1) {irflag1 = 2; }
+  if(ir1 ==1 && ir2 ==0 && irflag1 == 2) {irflag1 = 3; }
+  if(ir1 ==1 && ir2 ==1 && irflag1 == 3) {
+    count++ ;
+    irflag1 = 0;
+    Serial.print('c');
+    Serial.flush();
+    delay(50);
+    Serial.print(String(count));
+  }
+  // to decrement count when people exit from room
+  if(ir2 ==0 && ir1 ==1 && irflag2 == 0) {irflag2 = 1; }
+  if(ir2 ==0 && ir1 ==0 && irflag2 == 1) {irflag2 = 2; }
+  if(ir2 ==1 && ir1 ==0 && irflag2 == 2) {irflag2 = 3; }
+  if(ir2 ==1 && ir1 ==1 && irflag2 == 3) {
+    count-- ;
+    irflag2 = 0;
+    if(count < 0){ count = 0 ; }
+    Serial.print('c');
+    Serial.flush();
+    delay(50);
+    Serial.print(String(count));
+  }
+  // reset all the flags while all sensors are in relax
+  if(ir1 ==1 && ir2 ==1) {irflag1 =0; irflag2 =0; }
+  return count ;
+}
+
+// function to print last year cources
+int printLYcources(){
+    customKey = 0;
+    tag = 13;
+    lcd.clear();
+    lcd.print("Select LY Cources...");
+    delay(2000);
+    lcd.clear();
+    for(int b=0; b<4; b++)
+    {
+          int p = b+1;
+          lcd.setCursor(0,b);
+          lcd.print(p+ LYcourses[b]);
+    }
+    return tag;
+}
+
+int printTYcources(){
+    customKey = 0;
+    tag = 14;
+    lcd.clear();
+    lcd.print("Select TY Cources...");
+    delay(2000); 
+    lcd.clear();
+    for(int c=0; c<4; c++)
+    {
+          int p = c+1;
+          lcd.setCursor(0,c);
+          lcd.print(p+ TYcourses[c]);
+    }
+    return tag;
+}
+
+int printSYcources(){
+    customKey = 0;
+    tag = 15;
+    lcd.clear();
+    lcd.print("Select SY Cources...");
+    delay(2000);
+    lcd.clear();
+    for(int d=0; d<4; d++)
+    {
+          int p=d+1;
+          lcd.setCursor(0,d);
+          lcd.print(p+ SYcourses[d]);
+    }
+    return tag;
+}
+
+int printFYcources(){
+    customKey = 0;
+    tag = 16;
+    lcd.clear();
+    lcd.print("Select FY Cources...");
+    delay(2000);
+    lcd.clear();
+    for(int e=0; e<4; e++)
+    {
+          int p=e+1;
+          lcd.setCursor(0,e);
+          lcd.print(p+ FYcourses[e]);
+    }
+    return tag;
+}
+
+int printfaculty(){
+    customKey = 0;
+    tag = 17;
+    lcd.clear();
+    lcd.print("Select Faculty Name...");
+    delay(2000);
+    lcd.clear();
+    for(int f=0; f<4; f++)
+    {
+          int p=f+1;
+          lcd.setCursor(0,f);
+          lcd.print(p+ faculty[f]);
+    }
+    return tag;
+}
+
+int printclassinfo(){
+    customKey = 0;
+    tag = 18;
+    lcd.clear();
+    lcd.print("Check this info...");
+    delay(2000);
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print(classinfo[0]);
+    lcd.setCursor(10,1);
+    lcd.print(classinfo[1]);
+    lcd.setCursor(0,3);
+    lcd.print(classinfo[2]);
+    lcd.setCursor(10,3);
+    lcd.print(classinfo[3]);
+    lcd.setCursor(0,2);
+    lcd.print("  ENTER     BACK  ");
+    
+    return tag;
+}
+int printbranches(){
+    customKey = 0;
+    tag = 19;
+    lcd.clear();
+    lcd.print("Choose Department.");
+    delay(2000);
+    lcd.clear();
+    for(int g=0; g<4; g++)
+    {
+          int p = g+1;
+          lcd.setCursor(0,g);
+          lcd.print(p+ branches[g]);
+    }
+    return tag;
+}
+
+int printclasses(){
+    customKey = 0;
+    tag = 21;
+    lcd.clear();
+    lcd.print("Choose Class Name.");
+    delay(2000);
+    lcd.clear();
+    for(int g=0; g<4; g++)
+    {
+          int p = g+1;
+          lcd.setCursor(0,g);
+          lcd.print(p+ classes[g]);
+    }
+    return tag;
+}
